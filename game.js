@@ -84,10 +84,22 @@ function create() {
     player.setSize(32, 32); // Set a size for collision
     player.setDisplaySize(32,32); // Scale display for visibility
     player.setOrigin(0.5);
-    // Create a graphic to draw the player
-    var playerGraphic = this.add.graphics({ fillStyle: { color: 0x00ff00 } }); // Green
-    playerGraphic.fillRect(-16, -16, 32, 32); // Draw a square
-    player.setTexture(playerGraphic.generateTexture('playerTexture', 32, 32));  //Set texture
+
+    // Create a ship-like shape for the player
+    var playerGraphic = this.add.graphics();
+    playerGraphic.fillStyle(0x32CD32, 1); // LimeGreen
+    playerGraphic.beginPath();
+    playerGraphic.moveTo(0, -16);  // Top point of triangle
+    playerGraphic.lineTo(-16, 16); // Bottom left
+    playerGraphic.lineTo(16, 16);  // Bottom right
+    playerGraphic.closePath();
+    playerGraphic.fillPath();
+
+    playerGraphic.fillStyle(0x008000, 1); //Green
+    playerGraphic.fillRect(-12, 10, 24, 12); // Body of the ship
+
+    player.setTexture(playerGraphic.generateTexture('playerTexture', 32, 32));
+    playerGraphic.destroy(); //Destroy the graphics object
 
     // Input
     cursors = this.input.keyboard.createCursorKeys();
@@ -101,14 +113,16 @@ function create() {
         immovable: true // Bullets don't move when colliding
     });
 
-    var bulletGraphic = this.add.graphics({ fillStyle: { color: 0xffffff } }); //White
-    bulletGraphic.fillRect(-4, -10, 8, 20);
+    var bulletGraphic = this.add.graphics();
+    bulletGraphic.fillStyle(0xffffff, 1); // White
+    bulletGraphic.fillRect(-2, -8, 4, 16); // Elongated rectangle
     bullets.createMultiple({
-        key: bulletGraphic.generateTexture('bulletTexture',8,20),
+        key: bulletGraphic.generateTexture('bulletTexture', 4, 16),
         quantity: 20,
         active: false,
         visible: false
-    })
+    });
+    bulletGraphic.destroy();
 
     // Enemies
     enemies = this.physics.add.group();
@@ -201,16 +215,19 @@ function update(time) {
 }
 
 function spawnEnemy(scene) {
-    // Create a simple rectangle for the enemy
+    // Create a simple circle for the enemy
     let enemy = enemies.create(Phaser.Math.Between(50, 750), 50, null);
     enemy.setOrigin(0.5);
     const enemySize = Phaser.Math.Between(20,30);
     enemy.setDisplaySize(enemySize, enemySize); //Varying sizes
     enemy.setSize(enemySize, enemySize);
 
-    var enemyGraphic = scene.add.graphics({ fillStyle: { color: 0xff0000 } }); // Red
-    enemyGraphic.fillRect(-enemySize/2,-enemySize/2, enemySize, enemySize);
+    var enemyGraphic = scene.add.graphics();
+    enemyGraphic.fillStyle(Phaser.Display.Color.RandomRGB().color, 1); // Random red-ish color
+
+    enemyGraphic.fillCircle(0,0, enemySize/2);
     enemy.setTexture(enemyGraphic.generateTexture('enemyTexture', enemySize,enemySize));
+    enemyGraphic.destroy();
 
     const enemySpeed = Phaser.Math.Between(40, 80);
     enemy.setVelocityY(enemySpeed); //Varying Speeds
@@ -236,9 +253,13 @@ function spawnMiniboss(scene, bossNumber) {
     let miniboss = enemies.create(400, 50, null);
     miniboss.setOrigin(0.5);
     miniboss.setDisplaySize(48, 48);
-    var minibossGraphic = scene.add.graphics({ fillStyle: { color: 0xffa500 } }); // Orange
-    minibossGraphic.fillRect(-24, -24, 48, 48);
+
+    var minibossGraphic = scene.add.graphics();
+    minibossGraphic.fillStyle(0xffa500, 1); // Orange
+    minibossGraphic.fillCircle(0,0, 24); // Circle
+
     miniboss.setTexture(minibossGraphic.generateTexture('minibossTexture'+bossNumber, 48, 48));
+    minibossGraphic.destroy();
 
     miniboss.setVelocityY(30);
     miniboss.setCollideWorldBounds(true);
@@ -253,9 +274,12 @@ function spawnBoss(scene) {
    let boss = enemies.create(400, 50, null);
     boss.setOrigin(0.5);
     boss.setDisplaySize(64, 64);
-    var bossGraphic = scene.add.graphics({ fillStyle: { color: 0x0000ff } }); // Blue
-    bossGraphic.fillRect(-32, -32, 64, 64);
+    var bossGraphic = scene.add.graphics();
+    bossGraphic.fillStyle(0x0000ff, 1); // Blue
+    bossGraphic.fillCircle(0,0, 32); // Circle
+
     boss.setTexture(bossGraphic.generateTexture('bossTexture', 64, 64));
+    bossGraphic.destroy();
 
     boss.setVelocityY(20);
     boss.setCollideWorldBounds(true);
@@ -303,13 +327,36 @@ function updateScore(points) {
 }
 
 function spawnPowerUp(scene) {
-    let powerUp = powerUps.create(Phaser.Math.Between(50, 750), 50, null);
+  let powerUp = powerUps.create(Phaser.Math.Between(50, 750), 50, null);
     powerUp.setOrigin(0.5);
     powerUp.setDisplaySize(20, 20);
 
-    var powerUpGraphic = scene.add.graphics({ fillStyle: { color: 0xffff00 } }); // Yellow
-    powerUpGraphic.fillCircle(0,0,10); //Draw a circle
+    // Create a star shape for the power-up
+    var powerUpGraphic = scene.add.graphics();
+    powerUpGraphic.fillStyle(0xffff00, 1); // Yellow
+
+    // Define the points of the star (you can adjust these values)
+    const points = 5; // Number of points for the star
+    const outerRadius = 10;
+    const innerRadius = 5;
+    powerUpGraphic.beginPath();
+    for (let i = 0; i < 2 * points; i++) {
+        const radius = (i % 2 === 0) ? outerRadius : innerRadius;
+        const angle = Math.PI * i / points - Math.PI / 2; // Start at top
+        const x = radius * Math.cos(angle);
+        const y = radius * Math.sin(angle);
+        if (i === 0) {
+            powerUpGraphic.moveTo(x, y);
+        } else {
+            powerUpGraphic.lineTo(x, y);
+        }
+    }
+    powerUpGraphic.closePath();
+    powerUpGraphic.fillPath();
+
     powerUp.setTexture(powerUpGraphic.generateTexture('powerUpTexture', 20, 20));
+    powerUpGraphic.destroy();
+
     powerUp.setVelocityY(50);
 }
 
@@ -341,3 +388,4 @@ function restartGame() {
 
     this.scene.restart(); //Restart the scene
 }
+
