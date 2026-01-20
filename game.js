@@ -73,6 +73,9 @@ var nextGunUnlock = guns[1].unlockCost; //Score required to unlock next weapon
 
 var gunText;
 
+var lastFired = 0; // Time the last bullet was fired
+// var fireRate = 200; // Milliseconds between shots - NOW IN GUN DEFINITIONS
+
 function preload() {
     // No assets to load (we'll generate them)
 }
@@ -154,9 +157,6 @@ function create() {
     // Gun Text
     gunText = this.add.text(10, 60, 'Gun: ' + guns[currentGunIndex].name, {fontSize: '20px', fill: '#fff'});
 
-    // Fire Rate
-    this.lastFired = 0;
-
 }
 
 function update(time) {
@@ -180,7 +180,7 @@ function update(time) {
     }
 
     // Shooting
-    if (cursors.space.isDown && time > this.lastFired) { //Holding space bar to shoot
+    if (cursors.space.isDown && time > lastFired) { //Holding space bar to shoot
         fireBullet(time);
     }
 
@@ -292,13 +292,11 @@ function spawnBoss(scene) {
 
 function fireBullet(time) {
     const currentGun = guns[currentGunIndex];
-    if (time > this.lastFired) {
-        var bullet = bullets.get();
-        if (bullet) {
-            bullet.enableBody(true, player.x, player.y - 20, true, true);
-            bullet.setVelocityY(currentGun.bulletSpeed);
-            this.lastFired = time + currentGun.fireRate;
-        }
+    var bullet = bullets.get();
+    if (bullet) {
+        bullet.enableBody(true, player.x, player.y - 20, true, true);
+        bullet.setVelocityY(currentGun.bulletSpeed);
+        lastFired = time + currentGun.fireRate;
     }
 }
 
@@ -381,6 +379,7 @@ function restartGame() {
     score = 0; // Reset score
     currentGunIndex = 0; // Reset to basic gun
     gunText.setText('Gun: ' + guns[currentGunIndex].name);
+    lastFired = 0; // Reset the lastFired timer
 
     miniboss1Spawned = false;
     miniboss2Spawned = false;
@@ -388,4 +387,3 @@ function restartGame() {
 
     this.scene.restart(); //Restart the scene
 }
-
