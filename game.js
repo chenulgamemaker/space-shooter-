@@ -40,6 +40,39 @@ var miniboss1Spawned = false;
 var miniboss2Spawned = false;
 var bossSpawned = false;
 
+// Gun Definitions
+var guns = [
+    {
+        name: "Basic Gun",
+        fireRate: 300, // Milliseconds between shots
+        bulletSpeed: -400,
+        unlockCost: 0,
+    },
+    {
+        name: "Double Shot",
+        fireRate: 250,
+        bulletSpeed: -500,
+        unlockCost: 50,
+    },
+    {
+        name: "Rapid Fire",
+        fireRate: 150,
+        bulletSpeed: -600,
+        unlockCost: 150,
+    },
+    {
+        name: "Laser Beam",
+        fireRate: 50,
+        bulletSpeed: -800,
+        unlockCost: 400,
+    }
+];
+
+var currentGunIndex = 0; // Start with the first gun
+var nextGunUnlock = guns[1].unlockCost; //Score required to unlock next weapon
+
+var gunText;
+
 function preload() {
     // No assets to load (we'll generate them)
 }
@@ -100,14 +133,19 @@ function create() {
     healthText = this.add.text(10, 35, 'Health: 100', { fontSize: '20px', fill: '#fff' });
 
      // Game Over Text
-    gameOverText = this.add.text(400, 300, 'GAME OVER\nClick to Restart', { fontSize: '48px', fill: '#f00', align: 'center' });
+    gameOverText = this.add.dom(400, 300, 'div', 'id="game-over-text"', 'GAME OVER\nClick to Restart');
     gameOverText.setOrigin(0.5);
-    gameOverText.setInteractive();  // Make it clickable
-    gameOverText.on('pointerdown', restartGame, this); //On click restart
     gameOverText.visible = false; // Initially hidden
+
+    // Gun Text
+    gunText = this.add.text(10, 60, 'Gun: ' + guns[currentGunIndex].name, {fontSize: '20px', fill: '#fff'});
+
+    // Fire Rate
+    this.lastFired = 0;
+
 }
 
-function update() {
+function update(time) {
     if (gameOver) {
         return;  //Stop updating if game over
     }
@@ -128,8 +166,8 @@ function update() {
     }
 
     // Shooting
-    if (Phaser.Input.Keyboard.JustDown(cursors.space)) {
-        fireBullet();
+    if (cursors.space.isDown && time > this.lastFired) { //Holding space bar to shoot
+        fireBullet(time);
     }
 
     // Enemy Spawning Logic
@@ -153,6 +191,13 @@ function update() {
     if (Phaser.Math.Between(0, 500) < 2) {
         spawnPowerUp(this);
     }
+
+    // Gun Unlocking
+    if (currentGunIndex < guns.length - 1 && score >= nextGunUnlock){
+        currentGunIndex++; //Upgrade the weapon
+        nextGunUnlock = (currentGunIndex < guns.length -1) ? guns[currentGunIndex+1].unlockCost : Number.MAX_SAFE_INTEGER; //If has next update its score, else max integer
+        gunText.setText('Gun: ' + guns[currentGunIndex].name); //Update text
+    }
 }
 
 function spawnEnemy(scene) {
@@ -171,6 +216,9 @@ function spawnEnemy(scene) {
     enemy.setVelocityY(enemySpeed); //Varying Speeds
     enemy.setCollideWorldBounds(true);
     enemy.setBounce(1);
+
+    // Enemy Properties
+    enemy.pointValue = 5; // Basic enemy gives 5 points
 
     //New Enemy AI - Random Direction Changes
     enemy.directionChangeTimer = scene.time.addEvent({
@@ -195,6 +243,9 @@ function spawnMiniboss(scene, bossNumber) {
     miniboss.setVelocityY(30);
     miniboss.setCollideWorldBounds(true);
     miniboss.setBounce(1);
+
+     // Enemy Properties
+    miniboss.pointValue = 100; // Miniboss gives 100 points
     return miniboss;
 }
 
@@ -209,21 +260,29 @@ function spawnBoss(scene) {
     boss.setVelocityY(20);
     boss.setCollideWorldBounds(true);
     boss.setBounce(1);
+
+    // Enemy Properties
+    boss.pointValue = 500; // Boss gives 500 points
     return boss;
 }
 
-function fireBullet() {
-    var bullet = bullets.get();
-    if (bullet) {
-        bullet.enableBody(true, player.x, player.y - 20, true, true);
-        bullet.setVelocityY(-400);
+function fireBullet(time) {
+    const currentGun = guns[currentGunIndex];
+    if (time > this.lastFired) {
+        var bullet = bullets.get();
+        if (bullet) {
+            bullet.enableBody(true, player.x, player.y - 20, true, true);
+            bullet.setVelocityY(currentGun.bulletSpeed);
+            this.lastFired = time + currentGun.fireRate;
+        }
     }
 }
 
 function hitEnemy(bullet, enemy) {
     bullet.disableBody(true, true);
+    const points = enemy.pointValue;
     enemy.destroy();
-    updateScore(10);
+    updateScore(points);
 }
 
 function playerHitEnemy(player, enemy) {
@@ -265,7 +324,7 @@ function endGame(scene) {
     player.destroy();
     enemies.getChildren().forEach(enemy => enemy.destroy()); // Destroy remaining enemies
 
-    gameOverText.visible = true; //Show the game over text
+    gameOverText.setVisible(true); //Show the game over text
     scene.physics.pause(); // Stop the physics simulation
 }
 
@@ -273,6 +332,9 @@ function restartGame() {
     gameOver = false;
     playerHealth = 100; // Reset health
     score = 0; // Reset score
+    currentGunIndex = 0; // Reset to basic gun
+    gunText.setText('Gun: ' + guns[currentGunIndex].name);
+
     miniboss1Spawned = false;
     miniboss2Spawned = false;
     bossSpawned = false;
